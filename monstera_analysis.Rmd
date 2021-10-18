@@ -35,7 +35,7 @@ converting_read2 <- function(curr_path){
 }
 
 # Loading behavioral data
-sub_dir = dir_ls("Monstera/data")
+sub_dir = dir_ls("../Monstera/data")
 prescan_behav <- map(sub_dir, dir_ls, glob = '*prescan*_behav*.csv') %>% unlist()
 scan_behav <- map(sub_dir, dir_ls, regexp = '(.*)_scan\\d_behav_.*') %>% unlist()
 
@@ -136,7 +136,7 @@ print(cat("total number of trials = ", total_trial))
 print(cat("number of trials with more than one response during the route = ", nrow(target_trial)))
 print(cat("percentage of trials with more than one response = ", per))
 
-scan_batch %>% filter(other_resp != "[-999]") %>% select(sub, other_resp, trial) %>% head() %>% gt()
+scan_batch %>% filter(other_resp != "[-999]") %>% select(sub, other_resp, round, trial) %>% head() %>% gt()
 
 ```
 
