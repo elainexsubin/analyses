@@ -173,7 +173,9 @@ print(cat("percentage of trials = ", per))
 ```
 
 
-Number of subjects who responded during the same segment 
+6) 
+
+Number of subjects who responded during the same segment (not at image 1 & no second response)
 ```{r}
 tem2 = multiple %>% mutate(n_other_res = numOfTimes) %>% filter(i_pic == 1 & n_other_res == 1) 
 
