@@ -1,0 +1,185 @@
+---
+title: "Other Responses"
+date: "10/14/2021"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    theme: journal
+  pdf_document:
+    toc: yes
+editor_options:
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning = FALSE)
+library(gt)
+library(fs)
+library(purrr)
+library(tidyverse)
+theme_set(theme_minimal(15))
+```
+
+```{r setup, include=FALSE}
+converting_read <- function(curr_path){
+  print(curr_path)
+  read_csv(curr_path) %>% mutate(sub = as.character(sub),
+                                 resp_obj = as.character(resp_obj))
+}
+
+converting_read2 <- function(curr_path){
+  print(curr_path)
+  read_csv(curr_path) %>% mutate(sub = as.character(sub),
+                                 post_first_resp_obj = as.character(post_first_resp_obj))
+}
+
+# Loading behavioral data
+sub_dir = dir_ls("Monstera/data")
+prescan_behav <- map(sub_dir, dir_ls, glob = '*prescan*_behav*.csv') %>% unlist()
+scan_behav <- map(sub_dir, dir_ls, regexp = '(.*)_scan\\d_behav_.*') %>% unlist()
+
+prescan_batch <- map_dfr(prescan_behav, converting_read)
+scan_batch <- map_dfr(scan_behav, converting_read2)
+
+```
+
+
+# Scan Phase 
+
+Subjects who answered at least 3 times during the route 
+
+*i_pic = image selected at first response* 
+
+*n_other_res = number of responses made during the route excluding the first response* 
+
+```{r}
+multiple = scan_batch %>% filter(other_resp != "[-999]") %>% mutate(correct = ifelse(post_first_resp_obj == destination, 1, 0)) 
+v = strsplit(multiple$other_resp, " ")
+
+numOfTimes = 1
+for (i in 2:length(v)) {
+  n = length(v[[i]]) / 3
+  numOfTimes <- c(numOfTimes, n)
+}
+
+multiple %>% mutate(n_other_res = numOfTimes) %>% select(sub, i_pic, n_other_res, correct) %>% filter(n_other_res != 1) %>% group_by(sub) %>% arrange(desc(n_other_res)) %>% gt()
+
+```
+
+```{r include = FALSE}
+
+```
+
+
+2)
+
+Top 6 subjects who responded more than once during the route while the first response was not at image 1
+
+*n = number of trials* 
+
+```{r}
+scan_batch %>% filter(other_resp != "[-999]" & i_pic != 1) %>% group_by(sub) %>% summarise(n=n()) %>% arrange(desc(n)) %>% head() %>% gt()
+```
+
+
+Top 6 subjects who responded more than once during the route (first response at image 1 included)
+
+```{r}
+scan_batch %>% filter(other_resp != "[-999]") %>% group_by(sub) %>% summarise(n=n()) %>% arrange(desc(n)) %>% head() %>% gt()
+
+```
+
+
+3)
+
+Subjects with first response during the same segment, but not at image 1 
+
+```{r}
+
+press_twice = scan_batch %>% 
+  filter(other_resp != "[-999]" & i_pic != 1 & i_pic < 26) %>%
+  mutate(correct = ifelse(post_first_resp_obj == destination, 1, 0)) 
+```
+
+```{r echo=FALSE}
+a = strsplit(press_twice$other_resp, " ")
+
+same = 0 # not from the same segment 
+second = 28
+for (i in 2:9) {
+  second <- c(second, as.numeric(substring(a[[i]][3], 1, 2)))
+    if (as.numeric(substring(a[[i]][3], 1, 2)) < 26) {
+      same <- c(same, 1) # from the same segment 
+      } else {
+        same <- c(same, 0)
+      }
+  
+}
+
+press_twice %>% mutate(from_same_segment = same, second_response = second, end_response = post_first_resp) %>% select(sub, i_pic, end_response, correct, second_response, from_same_segment) %>% gt()
+```
+
+
+4) 
+
+Overall % of trials with more than one response during the route 
+
+```{r}
+
+total_trial = 16 * 6 * 41
+target_trial = scan_batch %>% filter(other_resp != "[-999]") %>% select(sub, other_resp, trial)
+
+per = (nrow(target_trial) / total_trial) * 100
+
+print(cat("total number of trials = ", total_trial))
+print(cat("number of trials with more than one response during the route = ", nrow(target_trial)))
+print(cat("percentage of trials with more than one response = ", per))
+
+scan_batch %>% filter(other_resp != "[-999]") %>% select(sub, other_resp, trial) %>% head() %>% gt()
+
+```
+
+
+5) 
+
+Overall % of trials with more than one response during the route 
+
+*excluding when first response was at image 1 AND there was only one more other response* 
+
+```{r}
+
+multiple = scan_batch %>% filter(other_resp != "[-999]") %>% mutate(correct = ifelse(post_first_resp_obj == destination, 1, 0)) 
+v = strsplit(multiple$other_resp, " ")
+
+numOfTimes = 1
+for (i in 2:length(v)) {
+  n = length(v[[i]]) / 3
+  numOfTimes <- c(numOfTimes, n)
+}
+
+
+not_tar = multiple %>% mutate(n_other_res = numOfTimes) %>% filter(i_pic == 1 & n_other_res == 1) 
+multiple %>% mutate(n_other_res = numOfTimes) %>% filter(i_pic == 1 & n_other_res == 1) %>% select(sub, i_pic, other_resp, n_other_res, correct) %>% gt()
+
+target = nrow(target_trial) - nrow(not_tar)
+
+per = (target / total_trial) * 100
+
+print(cat("number of target trials (above excluded) = ", target))
+print(cat("percentage of trials = ", per))
+
+
+```
+
+
+Number of subjects who responded during the same segment 
+```{r}
+tem2 = multiple %>% mutate(n_other_res = numOfTimes) %>% filter(i_pic == 1 & n_other_res == 1) 
+
+scan_batch %>% mutate(correct = ifelse(post_first_resp_obj == destination, 1, 0)) %>% filter(i_pic < 26 & i_pic != 1 & i_pic != -999 & other_resp == "[-999]") %>% group_by(round) %>% summarise(n=n()) %>% arrange(round) %>% gt()
+```
+
+
+
+
